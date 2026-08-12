@@ -855,6 +855,7 @@ function TabsMethods:Text(Args): Text
 
 	if not TextData.Selectable then
 		TextInstance = Instance.new("TextLabel")
+		if not TextInstance then error("Something went wrong") end
 		if not TextInstance:IsA("TextLabel") then error("Seomthing went wrong") end
 
 		TextInstance.Name = "TextInstance"
@@ -874,6 +875,7 @@ function TabsMethods:Text(Args): Text
 		TextInstance.AutomaticSize = Enum.AutomaticSize.Y
 	else
 		TextInstance = Instance.new("TextBox")
+		if not TextInstance then error("Something went wrong") end
 		if not TextInstance:IsA("TextBox") then error("Something went wrong") end
 
 		TextInstance.Name = "TextInstance"
@@ -1817,5 +1819,13 @@ function Debugger.UI.new(Args: WindowArgs): Window
 	}
 	return setmetatable(WindowFake, windowMt) :: any
 end
+
+-- for _, item in game:GetService("Players").LocalPlayer.Character:GetChildren() do
+-- 	if item:IsA("BasePart") then
+-- 		item.CanCollide = false
+-- 		item.CanQuery = false
+-- 		item.CanTouch = false
+-- 	end
+-- end
 
 return Debugger
