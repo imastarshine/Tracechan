@@ -185,7 +185,7 @@ export type TabArgs = {
 }
 
 export type TabsMethods = {
-	Select: () -> (),
+	Select: (self: Tab) -> (),
 	Divider: (self: Tab) -> Frame,
 	Text: (
 		self: Tab,
@@ -373,7 +373,7 @@ end
 
 local function ToDict(t: {any}): {[any]: boolean}
 	local result = {}
-	for i,v in pairs(t) do
+	for _, v in pairs(t) do
 		result[v] = true
 	end
 	return result
@@ -408,7 +408,7 @@ end
 
 --================ TODICT CONSTANTS ================--
 
-local WINDOW_READ_ONLY_KEYS = ToDict({"Instance", "StateButton", "NotificationHandler", "TitleLabel", "CanvasGroup", "ScrollingFrame"})
+local WINDOW_READ_ONLY_KEYS = ToDict({"Instance", "StateButton", "NotificationHandler", "TitleLabel", "CanvasGroup", "DragHeader", "TabButtons", "TabsHandler", "TabsHandlerUIPageLayout"})
 
 --================ METHODS TABLES ================--
 
@@ -703,7 +703,7 @@ function WindowMethods:Notification(title: string?, content: string, enum_: stri
 	Label.TextSize = 14
 	Label.Size = UDim2.new(1, -18, 0, 14)
 	Label.BorderColor3 = Color3.new(0, 0, 0)
-	Label.Text = "Notification"
+	Label.Text = (title::string)
 	Label.TextColor3 = Color3.new(0.76, 0.76, 0.76)
 	Label.AutomaticSize = Enum.AutomaticSize.Y
 	Label.BackgroundTransparency = 1
@@ -756,12 +756,12 @@ function WindowMethods:Notification(title: string?, content: string, enum_: stri
 	UIShadow.Offset = UDim2.new(0, 0, 0, 0)
 	UIShadow.Spread = UDim2.new(0, 0, 0, 0)
 	UIShadow.Transparency = 1
-	UIShadow.ZIndex = -1
 	UIShadow.Parent = NotificationFrame
 
 	local UIStroke = Instance.new("UIStroke")
 	UIStroke.Name = "UIStroke"
 	UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	UIStroke.Parent = NotificationFrame
 
 	local UIGradient4 = Instance.new("UIGradient")
 	UIGradient4.Name = "UIGradient 4"
@@ -792,7 +792,7 @@ function WindowMethods:Notification(title: string?, content: string, enum_: stri
 		ImageLabel.Image = "rbxassetid://11295275950"
 	end
 
-	duration = math.clamp(if duration == nil then 3 else duration, 3, math.huge) + 0.9
+	duration = math.clamp(duration :: number, 3, math.huge) + 0.9
 
 	TweenService:Create(UIGradient, TweenInfo.new(0.9, Enum.EasingStyle.Cubic), {Offset = Vector2.new(-1,0)}):Play()
 	TweenService:Create(UIGradient1, TweenInfo.new(0.9, Enum.EasingStyle.Cubic), {Offset = Vector2.new(-1,0)}):Play()
@@ -817,6 +817,37 @@ function WindowMethods:Notification(title: string?, content: string, enum_: stri
 end
 
 local TabsMethods = {} :: TabsMethods
+
+function TabsMethods:Select()
+	local raw = GetRaw(self) :: Tab
+	if not raw or not raw.Instance or not raw.ScrollingFrame then
+		return
+	end
+
+	local tabsHandler = raw.ScrollingFrame.Parent
+	if tabsHandler then
+		local pageLayout = tabsHandler:FindFirstChildOfClass("UIPageLayout")
+		if pageLayout then
+			pageLayout:JumpTo(raw.ScrollingFrame)
+		end
+	end
+
+	local holder = raw.Instance.Parent
+	if holder then
+		for _, otherButton in holder:GetChildren() do
+			if not otherButton:IsA("TextButton") then continue end
+			local otherStroke = otherButton:FindFirstChild("UIStroke")
+			if otherStroke and otherStroke:IsA("UIStroke") then
+				otherStroke.Color = Color3.fromRGB(102, 102, 102)
+			end
+		end
+	end
+
+	local ownStroke = raw.Instance:FindFirstChild("UIStroke")
+	if ownStroke and ownStroke:IsA("UIStroke") then
+		ownStroke.Color = Color3.new(1, 1, 1)
+	end
+end
 
 function TabsMethods:Divider(): Frame
 	local raw = GetRaw(self) :: Tab
@@ -856,7 +887,7 @@ function TabsMethods:Text(Args): Text
 	if not TextData.Selectable then
 		TextInstance = Instance.new("TextLabel")
 		if not TextInstance then error("Something went wrong") end
-		if not TextInstance:IsA("TextLabel") then error("Seomthing went wrong") end
+		if not TextInstance:IsA("TextLabel") then error("Somethin went wrong") end
 
 		TextInstance.Name = "TextInstance"
 		TextInstance.BorderSizePixel = 0
@@ -929,7 +960,7 @@ function TabsMethods:Button(Args: ButtonArgs): Button
 		Text = ValueOr(Args.Text, "Button"),
 		OnClick = Args.OnClick,
 		Enabled = ValueOr(Args.Enabled, true),
-		BackgroundColor = ValueOr(Args.TextColor, SColor.new(
+		BackgroundColor = ValueOr(Args.BackgroundColor, SColor.new(
 			Color3.fromRGB(199, 137, 196),
 			Color3.fromRGB(126, 84, 124)
 			)),
@@ -1130,7 +1161,7 @@ function TabsMethods:TextField(Args): TextField
 				TextFieldData.BackgroundColor = SColor.new(Color3.fromRGB(48, 50, 56), Color3.fromRGB(35, 35, 35))
 			end
 			TweenService:Create(TextFieldData.Instance, BASIC_TWEEN_INFO, {
-				BackgroundColor = if TextFieldData.Enabled then TextFieldData.BackgroundColor.Enabled else TextFieldData.BackgroundColor.Disabled
+				BackgroundColor3 = if TextFieldData.Enabled then TextFieldData.BackgroundColor.Enabled else TextFieldData.BackgroundColor.Disabled
 			}):Play()
 		elseif key == "BorderColor" then
 			if not value or typeof(value) ~= "table" then
@@ -1466,11 +1497,10 @@ function WindowMethods:Tab(Args): Tab
 	end)
 
 	Tab.MouseButton1Click:Connect(function()
-		print(raw)
 		if raw.TabsHandlerUIPageLayout.CurrentPage == ScrollingFrame then return end
 
 		for _, item in raw.Tabs do
-			if not item then continue end
+			if not item or not item.Instance then continue end
 
 			local UIStroke = item.Instance:FindFirstChild("UIStroke")
 			if not UIStroke or not UIStroke:IsA("UIStroke") then continue end
@@ -1654,6 +1684,7 @@ function Debugger.UI.new(Args: WindowArgs): Window
 	CanvasGroup.BorderColor3 = Color3.new(0, 0, 0)
 	CanvasGroup.BackgroundTransparency = 0.8
 	CanvasGroup.Position = UDim2.new(0.5, 0, 0.53, 0)
+	CanvasGroup.ZIndex = 5
 
 	local BackgroundImageLabel = Instance.new("ImageLabel")
 	BackgroundImageLabel.Name = "BackgroundImageLabel"
@@ -1666,11 +1697,17 @@ function Debugger.UI.new(Args: WindowArgs): Window
 	BackgroundImageLabel.ImageTransparency = WindowRaw.BackgroundImageTransparency
 	BackgroundImageLabel.ScaleType = WindowRaw.BackgroundImageScaleType
 	BackgroundImageLabel.Parent = Frame
+	BackgroundImageLabel.ZIndex = 2
 
 	local canvas_UICorner = Instance.new("UICorner")
 	canvas_UICorner.Name = "CanvasUICorner"
 	canvas_UICorner.CornerRadius = UDim.new(0, 10)
 	canvas_UICorner.Parent = CanvasGroup
+
+	local background_UICorner = Instance.new("UICorner")
+	background_UICorner.Name = "CanvasUICorner"
+	background_UICorner.CornerRadius = UDim.new(0, 14)
+	background_UICorner.Parent = BackgroundImageLabel
 
 	-- Tabs
 	local TabButtons = Instance.new("ScrollingFrame")
@@ -1746,6 +1783,7 @@ function Debugger.UI.new(Args: WindowArgs): Window
 			TweenService:Create(Frame, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { BackgroundTransparency = 1 }):Play()
 			TweenService:Create(TitleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { TextTransparency = 1 }):Play()
 			TweenService:Create(FrameUIShadow, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { Transparency = 1 }):Play()
+			TweenService:Create(BackgroundImageLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { ImageTransparency = 1 }):Play()
 		else
 			WindowRaw.Visible = true
 			Frame.Visible = true
@@ -1753,6 +1791,7 @@ function Debugger.UI.new(Args: WindowArgs): Window
 			TweenService:Create(Frame, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { BackgroundTransparency = 0.5 }):Play()
 			TweenService:Create(TitleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { TextTransparency = 0 }):Play()
 			TweenService:Create(FrameUIShadow, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { Transparency = 0.7 }):Play()
+			TweenService:Create(BackgroundImageLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { ImageTransparency = WindowRaw.BackgroundImageTransparency }):Play()
 		end
 	end)
 
@@ -1803,10 +1842,14 @@ function Debugger.UI.new(Args: WindowArgs): Window
 					TweenService:Create(CanvasGroup, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { GroupTransparency = 0 }):Play()
 					TweenService:Create(Frame, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { BackgroundTransparency = 0.5 }):Play()
 					TweenService:Create(TitleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { TextTransparency = 0 }):Play()
+					TweenService:Create(FrameUIShadow, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { Transparency = 0.7 }):Play()
+					TweenService:Create(BackgroundImageLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { ImageTransparency = WindowRaw.BackgroundImageTransparency }):Play()
 				else
 					TweenService:Create(CanvasGroup, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { GroupTransparency = 1 }):Play()
 					TweenService:Create(Frame, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { BackgroundTransparency = 1 }):Play()
 					TweenService:Create(TitleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { TextTransparency = 1 }):Play()
+					TweenService:Create(FrameUIShadow, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { Transparency = 1 }):Play()
+					TweenService:Create(BackgroundImageLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { ImageTransparency = 1 }):Play()
 				end
 			elseif key == "BackgroundImage" then
 				BackgroundImageLabel.Image = value
@@ -1820,12 +1863,4 @@ function Debugger.UI.new(Args: WindowArgs): Window
 	return setmetatable(WindowFake, windowMt) :: any
 end
 
--- for _, item in game:GetService("Players").LocalPlayer.Character:GetChildren() do
--- 	if item:IsA("BasePart") then
--- 		item.CanCollide = false
--- 		item.CanQuery = false
--- 		item.CanTouch = false
--- 	end
--- end
-
-return Debugger
+return Debugger																																																			
