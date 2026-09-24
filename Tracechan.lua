@@ -303,7 +303,6 @@ end
 
 --================ OTHER FUNCTIONS ================--
 
---TODO: Make this function more better
 -- Infinite yield: function dragGui()
 local CurrentlyDragging: GuiObject? = nil
 local function DragGUI(gui: GuiObject)
