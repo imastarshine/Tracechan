@@ -1,15 +1,16 @@
 # Tracechan
 
-Tracechan — it's simple UI library for Roblox Studio or Exploit. Used for debugging or simple functions in the game. The library uses metatables to work with library objects as if they were objects directly inside Roblox.
+Tracechan is a simple and lightweight UI library for Roblox Studio and Executors. Designed for debugging or building clean in-game interfaces. It utilizes metatables, allowing you to interact with library components as if they were native Roblox objects
 
 # Features
 
-1. Tabs
-2. Texts
-3. Buttons
-4. Text fields
-5. Switches
-6. Dividers
+- **Tabs** (Page navigation)
+- **Text Labels** (Normal & Selectable/Copyable)
+- **Buttons** (With active/disabled states)
+- **Text Fields** (With enter submission & placeholders)
+- **Switches** (Toggles with custom callback)
+- **Dividers**
+- **Notification System** (Success, Info, Warning, Error)
 
 # Usage
 
