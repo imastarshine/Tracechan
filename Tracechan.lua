@@ -331,10 +331,13 @@ local function DragGUI(gui: GuiObject)
 			dragStart = input.Position
 			startPos = gui.Position
 
-			input.Changed:Connect(function()
+			-- соединение на конец перетаскивания отключается само, иначе копится на каждом нажатии
+			local endConn: RBXScriptConnection
+			endConn = input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
 					dragging = false
 					CurrentlyDragging = nil
+					endConn:Disconnect()
 				end
 			end)
 		end
@@ -347,9 +350,16 @@ local function DragGUI(gui: GuiObject)
 		end
 	end)
 
-	UserInputService.InputChanged:Connect(function(input: InputObject)
+	-- глобальный сигнал: без отключения соединение переживает сам gui
+	local moveConn = UserInputService.InputChanged:Connect(function(input: InputObject)
 		if dragging and CurrentlyDragging == gui and input == dragInput then
 			update(input)
+		end
+	end)
+	gui.Destroying:Once(function()
+		moveConn:Disconnect()
+		if CurrentlyDragging == gui then
+			CurrentlyDragging = nil
 		end
 	end)
 end
@@ -1849,6 +1859,12 @@ function Debugger.UI.new(Args: WindowArgs): Window
 					TweenService:Create(TitleLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { TextTransparency = 1 }):Play()
 					TweenService:Create(FrameUIShadow, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { Transparency = 1 }):Play()
 					TweenService:Create(BackgroundImageLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), { ImageTransparency = 1 }):Play()
+					-- как у кнопки State: после затухания прячем Frame, иначе невидимое окно ловит клики
+					task.delay(0.6, function()
+						if WindowRaw.Visible == false then
+							Frame.Visible = false
+						end
+					end)
 				end
 			elseif key == "BackgroundImage" then
 				BackgroundImageLabel.Image = value
